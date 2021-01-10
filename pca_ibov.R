@@ -42,20 +42,17 @@ ibov <- ibov_ret
 
 ibov <- ibov %>% filter(data >= '2015-01-01' & data <='2020-12-30')
 
-pdf('output/retornos_indice.pdf')
 ggplot(ibov) +
   geom_line(aes(x=as.Date(data), y=ibov), color="#264653") +
   theme_light() +
   labs(x="Data", y="Retorno")
-dev.off()
 
-pdf('output/retornos_acu_indice.pdf')
 ibov %>% mutate(ret_acu= cumprod(1+ibov)) %>%
   ggplot() +
   geom_line(aes(x=as.Date(data), y=ret_acu), color="#2a9d8f") +
   theme_light() +
   labs(x="Data", y="Retorno acumulado")
-dev.off()
+
 
 #Webscrapping dos tickers das ações que compõe o indice e baixando os retornos via yahoo finance ------
 wiki_ibov <- read_html("https://en.wikipedia.org/wiki/List_of_companies_listed_on_B3")
@@ -86,23 +83,19 @@ ibov_stocks$data <- as.Date(ibov_stocks$data)
 
 ibov_stocks <- ibov_stocks %>% filter(data >= '2015-01-01' & data <='2020-12-30')
 
-pdf("output/ret_stocks.pdf")
 pivot_longer(ibov_stocks, cols = 2:dim(ibov_stocks)[2]) %>%
   ggplot() +
   geom_line(aes(x=data, y=value, color=name), show.legend = F, alpha=.5) +
   theme_light() +
   labs(x="Data", y="Retorno") +
   ylim(-1,1)
-dev.off()
 
-pdf("output/ret_acu_stocks.pdf")
 pivot_longer(ibov_stocks, cols = 2:dim(ibov_stocks)[2]) %>% group_by(name) %>% mutate(ret_acu=cumprod(1+value)) %>%
   ggplot() +
   geom_line(aes(x=data, y=ret_acu, color=name), show.legend = F, alpha=.5) +
   theme_light() +
   labs(x="Data", y="Retorno acumulado") +
   ylim(0,10)
-dev.off()
 
 #PCA-------
 ibov_stocks_pca <- ibov_stocks[,c(-1)] #Deixando apenas as ações, tirando data
@@ -113,18 +106,15 @@ ibov_stocks_pca <- apply(ibov_stocks_pca, 2, function(x) ifelse(is.na(x), 0, x) 
 pca <- prcomp(ibov_stocks_pca)
 
 
-pdf("output/explained_var.pdf")
 fviz_eig(pca, addlabels=TRUE, hjust = -0.3, barfill="#e9c46a", barcolor = "#e9c46a") +
   ylim(0, 40) +
   scale_color_manual("", values = c("#e9c46a")) +
   labs(title = "", y="Variação explicada", x="Dimensões")
-dev.off()
 
-pdf("output/eigenvalues.pdf")
 fviz_eig(pca, choice = "eigenvalue", 
          addlabels=F) +
   labs(title = "", y="Autovalores", x="Dimensões")
-dev.off()
+
 
 #Guardando os PCs
 componentes <- pca$rotation
@@ -155,29 +145,25 @@ ibovespa_vs_pca$data <- as.Date(ibovespa_vs_pca$data)
 
 ibovespa_vs_pca <- ibovespa_vs_pca %>% mutate(cr_ibovespa=cumprod(1+ibov),
                                               cr_pca_ibov=cumprod(1+ret_ibov_pca))
-pdf("output/ibov_vs_pca.pdf")
+
 ggplot(ibovespa_vs_pca) +
   geom_line(aes(y=cr_pca_ibov, x=data, colour="Retorno acum. do PC1"), size=1) +
   geom_line(aes(y=cr_ibovespa, x=data, colour="Retorno acum. do índice"), size=1) +
   theme_light() +
   theme(legend.position = "bottom", legend.box = "horizontal", legend.title = element_blank()) +
   labs(x="", y="Retorno acumulado")
-dev.off()
+
 
 #retorno da carteira pca
-pdf("output/ret_carteira_pca.pdf")  
 ggplot(ret_ibov_pca) +
   geom_line(aes(x=as.Date(data), y=as.numeric(as.character(ret_ibov_pca))), color="#2a9d8f",size=.5) +
   theme_light() +
   labs(x="Data", y="Retorno acumulado")
-dev.off()  
-
 
 
 #Tabelas ------
 m_cov <- cov(ibov_stocks_pca)
 stargazer(m_cov[1:4, 1:4])
-
 
 tickers_table <- cbind(colnames(ibov_stocks_pca)[1:20],
                        colnames(ibov_stocks_pca)[21:40],
@@ -186,7 +172,7 @@ tickers_table <- cbind(colnames(ibov_stocks_pca)[1:20],
 
 stargazer(tickers_table)
 
-
+#########Não tenho certeza se daqui pra baixo está certo....#######################
 #Construindo um portfolio winner com top10 ações ---------
 wining_portfolio <- sort(PC1,decreasing = T)[1:10]  %>% as.data.frame()
 wining_portfolio <- wining_portfolio %>% fortify()
@@ -213,15 +199,12 @@ wining_portfolio_ret$cum_ret_win <- cumprod(1+wining_portfolio_ret$V1)
 
 wining_portfolio_with_ibov <- cbind(ibovespa_vs_pca, wining_portfolio_ret)
 
-
-pdf("output/wining_port.pdf")  
 ggplot(wining_portfolio_with_ibov) +
   geom_line(aes(y=cr_ibovespa, x=data, colour="Retorno acum. do índice"), size=1) +
   geom_line(aes(y=cum_ret_win, x=data, colour="Retorno acum. de portfolio (top 10 ações)"), size=1) +
   theme_light() +
   theme(legend.position = "bottom", legend.box = "horizontal", legend.title = element_blank()) +
   labs(x="", y="Retorno acumulado")
-dev.off()
 
 #Construindo um portfolio loser com top10 ações ---------
 losing_portfolio <- sort(PC1)[1:10]  %>% as.data.frame()
